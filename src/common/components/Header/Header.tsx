@@ -25,7 +25,7 @@ export const Header = () => {
     dispatch(changeThemeModeAC({ themeMode: themeMode === 'light' ? 'dark' : 'light' }))
   }
 
-  const logoutHandler = () => {
+  const logout = () => {
     dispatch(logoutTC())
   }
 
@@ -37,7 +37,7 @@ export const Header = () => {
             <MenuIcon />
           </IconButton>
           <div>
-            {isLoggedIn && <NavButton onClick={logoutHandler}>Sing out</NavButton>}
+            {isLoggedIn && <NavButton onClick={logout}>Sing out</NavButton>}
             <NavButton background={theme.palette.primary.dark}>Faq</NavButton>
             <Switch color={'default'} onChange={changeMode} />
           </div>
