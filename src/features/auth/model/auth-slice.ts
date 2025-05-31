@@ -1,37 +1,37 @@
-import { createAppSlice, handleServerAppError, handleServerNetworkError } from '@/common/utils'
-import { LoginInputs } from '@/features/auth/lib/schemas'
-import { setAppStatusAC } from '@/app/app-slice.ts'
+import { setAppStatusAC } from '@/app/app-slice'
+import { clearDataAC } from '@/common/actions'
+import { AUTH_TOKEN } from '@/common/constants'
 import { ResultCode } from '@/common/enums'
-import { authApi } from '@/features/auth/api/authApi.ts'
-import { AUTH_TOKEN } from "@/common/constants"
-import { clearDataAC } from "@/common/actions"
+import { createAppSlice, handleServerAppError, handleServerNetworkError } from '@/common/utils'
+import { authApi } from '@/features/auth/api/authApi'
+import type { LoginArgs } from '@/features/auth/api/authApi.types'
 
 export const authSlice = createAppSlice({
   name: 'auth',
   initialState: {
     isLoggedIn: false,
+    isInitialized: false,
   },
   selectors: {
-    selectIsLoggedIn: (s) => s.isLoggedIn,
+    selectIsLoggedIn: (state) => state.isLoggedIn,
+    selectIsInitialized: (state) => state.isInitialized,
   },
   reducers: (create) => ({
     loginTC: create.asyncThunk(
-      async (payload: LoginInputs, { dispatch, rejectWithValue }) => {
+      async (data: LoginArgs, { dispatch, rejectWithValue }) => {
         try {
           dispatch(setAppStatusAC({ status: 'loading' }))
-          const res = await authApi.login(payload)
+          const res = await authApi.login(data)
           if (res.data.resultCode === ResultCode.Success) {
-            localStorage.setItem(AUTH_TOKEN, res.data.data.token)
             dispatch(setAppStatusAC({ status: 'succeeded' }))
+            localStorage.setItem(AUTH_TOKEN, res.data.data.token)
             return { isLoggedIn: true }
           } else {
             handleServerAppError(res.data, dispatch)
-            dispatch(setAppStatusAC({ status: 'failed' }))
             return rejectWithValue(null)
           }
-        } catch (error) {
-          handleServerNetworkError(dispatch, error)
-          dispatch(setAppStatusAC({ status: 'failed' }))
+        } catch (error: any) {
+          handleServerNetworkError(error, dispatch)
           return rejectWithValue(null)
         }
       },
@@ -47,18 +47,16 @@ export const authSlice = createAppSlice({
           dispatch(setAppStatusAC({ status: 'loading' }))
           const res = await authApi.logout()
           if (res.data.resultCode === ResultCode.Success) {
-            localStorage.removeItem(AUTH_TOKEN)
-            dispatch(clearDataAC())
             dispatch(setAppStatusAC({ status: 'succeeded' }))
+            dispatch(clearDataAC())
+            localStorage.removeItem(AUTH_TOKEN)
             return { isLoggedIn: false }
           } else {
             handleServerAppError(res.data, dispatch)
-            dispatch(setAppStatusAC({ status: 'failed' }))
             return rejectWithValue(null)
           }
-        } catch (error) {
-          handleServerNetworkError(dispatch, error)
-          dispatch(setAppStatusAC({ status: 'failed' }))
+        } catch (error: any) {
+          handleServerNetworkError(error, dispatch)
           return rejectWithValue(null)
         }
       },
@@ -78,12 +76,10 @@ export const authSlice = createAppSlice({
             return { isLoggedIn: true }
           } else {
             handleServerAppError(res.data, dispatch)
-            dispatch(setAppStatusAC({ status: 'failed' }))
             return rejectWithValue(null)
           }
-        } catch (error) {
-          handleServerNetworkError(dispatch, error)
-          dispatch(setAppStatusAC({ status: 'failed' }))
+        } catch (error: any) {
+          handleServerNetworkError(error, dispatch)
           return rejectWithValue(null)
         }
       },
@@ -91,11 +87,14 @@ export const authSlice = createAppSlice({
         fulfilled: (state, action) => {
           state.isLoggedIn = action.payload.isLoggedIn
         },
+        settled: (state) => {
+          state.isInitialized = true
+        },
       },
     ),
   }),
 })
 
-export const { selectIsLoggedIn } = authSlice.selectors
+export const { selectIsLoggedIn, selectIsInitialized } = authSlice.selectors
 export const { loginTC, logoutTC, initializeAppTC } = authSlice.actions
 export const authReducer = authSlice.reducer
